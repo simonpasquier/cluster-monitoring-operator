@@ -23,15 +23,21 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 
 	cmo "github.com/openshift/cluster-monitoring-operator/pkg/operator"
+	"github.com/openshift/library-go/pkg/operator/certrotation"
+	"github.com/openshift/library-go/pkg/operator/events"
 )
 
 type images map[string]string
@@ -79,6 +85,47 @@ func (i *images) Type() string {
 
 type telemetryConfig struct {
 	Matches []string `json:"matches"`
+}
+
+type eventRecorder string
+
+func (e *eventRecorder) Event(reason, message string) {
+	fmt.Println(">>> reason:", reason)
+	fmt.Println(">>> message:", message)
+}
+
+func (e *eventRecorder) Eventf(reason, messageFmt string, args ...interface{}) {
+	fmt.Println(">>> reason ", reason)
+	fmt.Printf(">>> "+messageFmt+"\n", args...)
+}
+
+func (e *eventRecorder) Warning(reason, message string) {
+	fmt.Println("*** reason:", reason)
+	fmt.Println("*** message:", message)
+}
+
+func (e *eventRecorder) Warningf(reason, messageFmt string, args ...interface{}) {
+	fmt.Println("*** reason ", reason)
+	fmt.Printf("*** "+messageFmt+"\n", args...)
+}
+
+// ForComponent allows to fiddle the component name before sending the event to sink.
+// Making more unique components will prevent the spam filter in upstream event sink from dropping
+// events.
+func (e *eventRecorder) ForComponent(componentName string) events.Recorder {
+	newEr := eventRecorder(componentName)
+	return &newEr
+}
+
+// WithComponentSuffix is similar to ForComponent except it just suffix the current component name instead of overriding.
+func (e *eventRecorder) WithComponentSuffix(componentNameSuffix string) events.Recorder {
+	newEr := eventRecorder(string(*e) + "-" + componentNameSuffix)
+	return &newEr
+}
+
+// ComponentName returns the current source component name for the event.
+func (e *eventRecorder) ComponentName() string {
+	return string(*e)
 }
 
 func Main() int {
@@ -169,6 +216,76 @@ func Main() int {
 	wg, ctx := errgroup.WithContext(ctx)
 
 	wg.Go(func() error { return o.Run(ctx.Done()) })
+	wg.Go(func() error {
+		klog.V(4).Info("Starting cert rotation controller")
+		er := eventRecorder("cmo")
+		kubeClient, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			panic(err)
+		}
+		inf := informers.NewSharedInformerFactoryWithOptions(
+			kubeClient,
+			1*time.Hour,
+			informers.WithNamespace(*namespace),
+		)
+		crc := certrotation.NewCertRotationController(
+			"GRPCCertController",
+			certrotation.SigningRotation{
+				Namespace:     *namespace,
+				Name:          "grpc-signer-ca",
+				Refresh:       15 * 24 * time.Hour,
+				Validity:      30 * 24 * time.Hour,
+				Informer:      inf.Core().V1().Secrets(),
+				Lister:        inf.Core().V1().Secrets().Lister(),
+				Client:        kubeClient.CoreV1(),
+				EventRecorder: &er,
+			},
+			certrotation.CABundleRotation{
+				Namespace:     *namespace,
+				Name:          "grpc-ca-bundle",
+				Informer:      inf.Core().V1().ConfigMaps(),
+				Lister:        inf.Core().V1().ConfigMaps().Lister(),
+				Client:        kubeClient.CoreV1(),
+				EventRecorder: &er,
+			},
+			certrotation.TargetRotation{
+				Namespace: *namespace,
+				Name:      "grpc-cert",
+				Refresh:   24 * time.Hour,
+				Validity:  2 * 24 * time.Hour,
+				CertCreator: &certrotation.ServingRotation{
+					Hostnames: func() []string {
+						klog.V(4).Info("get Hostnames")
+						return []string{"prometheus-grpc", "thanos-querier"}
+					},
+				},
+				Informer:      inf.Core().V1().Secrets(),
+				Lister:        inf.Core().V1().Secrets().Lister(),
+				Client:        kubeClient.CoreV1(),
+				EventRecorder: &er,
+			},
+			nil,
+			&er,
+		)
+		ch := make(chan struct{})
+		klog.V(4).Info("Starting informer")
+		inf.Start(ch)
+		klog.V(4).Info("Wait for informer's cache sync")
+		inf.WaitForCacheSync(ch)
+		runCtx := context.WithValue(ctx, certrotation.RunOnceContextKey, true)
+		t := time.NewTicker(time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-t.C:
+				klog.V(4).Info("Running cert rotation sync")
+				err = crc.Sync(runCtx, factory.NewSyncContext("cmo", &er))
+				klog.V(4).Info("Cert rotation sync finished")
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
 
 	term := make(chan os.Signal)
 	signal.Notify(term, os.Interrupt, syscall.SIGTERM)
