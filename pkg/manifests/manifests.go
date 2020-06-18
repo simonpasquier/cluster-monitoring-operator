@@ -1444,41 +1444,6 @@ func (f *Factory) PrometheusUserWorkload(grpcTLS *v1.Secret) (*monv1.Prometheus,
 		p.Spec.RemoteWrite = f.config.UserWorkloadConfiguration.Prometheus.RemoteWrite
 	}
 
-	// TODO: remove after 4.7
-
-	if f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.LogLevel != "" {
-		p.Spec.LogLevel = f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.LogLevel
-	}
-
-	if f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.Retention != "" {
-		p.Spec.Retention = f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.Retention
-	}
-
-	if f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.Resources != nil {
-		p.Spec.Resources = *f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.Resources
-	}
-
-	if f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.NodeSelector != nil {
-		p.Spec.NodeSelector = f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.NodeSelector
-	}
-
-	if len(f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.Tolerations) > 0 {
-		p.Spec.Tolerations = f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.Tolerations
-	}
-
-	if f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.ExternalLabels != nil {
-		p.Spec.ExternalLabels = f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.ExternalLabels
-	}
-
-	if f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.VolumeClaimTemplate != nil {
-		p.Spec.Storage = &monv1.StorageSpec{
-			VolumeClaimTemplate: *f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.VolumeClaimTemplate,
-		}
-	}
-	if len(f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.RemoteWrite) > 0 {
-		p.Spec.RemoteWrite = f.config.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.RemoteWrite
-	}
-	// end removal
 	if f.config.Images.Thanos != "" {
 		p.Spec.Thanos.Image = &f.config.Images.Thanos
 	}
@@ -1884,17 +1849,6 @@ func (f *Factory) PrometheusOperatorUserWorkloadDeployment(denyNamespaces []stri
 	if len(f.config.UserWorkloadConfiguration.PrometheusOperator.Tolerations) > 0 {
 		d.Spec.Template.Spec.Tolerations = f.config.UserWorkloadConfiguration.PrometheusOperator.Tolerations
 	}
-
-	// TODO: remove in 4.7
-	if len(f.config.ClusterMonitoringConfiguration.PrometheusOperatorUserWorkloadConfig.NodeSelector) > 0 {
-		d.Spec.Template.Spec.NodeSelector = f.config.ClusterMonitoringConfiguration.PrometheusOperatorUserWorkloadConfig.NodeSelector
-	}
-
-	if len(f.config.ClusterMonitoringConfiguration.PrometheusOperatorUserWorkloadConfig.Tolerations) > 0 {
-		d.Spec.Template.Spec.Tolerations = f.config.ClusterMonitoringConfiguration.PrometheusOperatorUserWorkloadConfig.Tolerations
-	}
-
-	// end of remove
 
 	d.Spec.Template.Spec.Containers[0].Image = f.config.Images.PrometheusOperator
 	d.Spec.Template.Spec.Containers[1].Image = f.config.Images.KubeRbacProxy
@@ -3077,30 +3031,6 @@ func (f *Factory) ThanosRulerCustomResource(queryURL string, trustedCA *v1.Confi
 	if len(f.config.UserWorkloadConfiguration.ThanosRuler.Tolerations) > 0 {
 		t.Spec.Tolerations = f.config.UserWorkloadConfiguration.ThanosRuler.Tolerations
 	}
-
-	// TODO: remove in 4.7
-	if f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.LogLevel != "" {
-		t.Spec.LogLevel = f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.LogLevel
-	}
-
-	if f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.Resources != nil {
-		t.Spec.Resources = *f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.Resources
-	}
-
-	if f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.VolumeClaimTemplate != nil {
-		t.Spec.Storage = &monv1.StorageSpec{
-			VolumeClaimTemplate: *f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.VolumeClaimTemplate,
-		}
-	}
-
-	if f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.NodeSelector != nil {
-		t.Spec.NodeSelector = f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.NodeSelector
-	}
-
-	if len(f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.Tolerations) > 0 {
-		t.Spec.Tolerations = f.config.ClusterMonitoringConfiguration.ThanosRulerConfig.Tolerations
-	}
-	// end of remove
 
 	t.Spec.Containers[1].Image = f.config.Images.OauthProxy
 	setEnv := func(name, value string) {

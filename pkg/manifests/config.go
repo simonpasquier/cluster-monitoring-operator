@@ -48,11 +48,18 @@ type ClusterMonitoringConfiguration struct {
 	K8sPrometheusAdapter     *K8sPrometheusAdapter        `json:"k8sPrometheusAdapter"`
 	ThanosQuerierConfig      *ThanosQuerierConfig         `json:"thanosQuerier"`
 	UserWorkloadEnabled      *bool                        `json:"enableUserWorkload"`
-	// TODO: Remove in 4.7 release.
-	PrometheusUserWorkloadConfig         *PrometheusK8sConfig      `json:"prometheusUserWorkload"`
-	PrometheusOperatorUserWorkloadConfig *PrometheusOperatorConfig `json:"prometheusOperatorUserWorkload"`
-	ThanosRulerConfig                    *ThanosRulerConfig        `json:"thanosRuler"`
-	UserWorkloadConfig                   *UserWorkloadConfig       `json:"techPreviewUserWorkload"`
+}
+
+// TODO: Remove in 4.7 release.
+type UserWorkloadLegacyConfiguration struct {
+	UserWorkloadConfiguration
+	TechPreviewUserWorkload *UserWorkloadConfig `json:"techPreviewUserWorkload"`
+}
+
+type UserWorkloadConfiguration struct {
+	PrometheusOperator *PrometheusOperatorConfig `json:"prometheusOperator"`
+	Prometheus         *PrometheusK8sConfig      `json:"prometheus"`
+	ThanosRuler        *ThanosRulerConfig        `json:"thanosRuler"`
 }
 
 type Images struct {
@@ -182,18 +189,36 @@ func (cfg *TelemeterClientConfig) IsEnabled() bool {
 }
 
 func NewConfig(content io.Reader) (*Config, error) {
-	c := Config{}
+	c := &Config{}
 	cmc := ClusterMonitoringConfiguration{}
 	err := k8syaml.NewYAMLOrJSONDecoder(content, 4096).Decode(&cmc)
 	if err != nil {
 		return nil, err
 	}
 	c.ClusterMonitoringConfiguration = &cmc
-	res := &c
-	res.applyDefaults()
+	c.applyDefaults()
 	c.UserWorkloadConfiguration = NewDefaultUserWorkloadMonitoringConfig()
 
-	return res, nil
+	legacy := &UserWorkloadLegacyConfiguration{}
+	err = k8syaml.NewYAMLOrJSONDecoder(content, 4096).Decode(legacy)
+	if err != nil {
+		return nil, err
+	}
+	if legacy.PrometheusOperator != nil {
+		c.UserWorkloadConfiguration.PrometheusOperator = legacy.PrometheusOperator
+	}
+	if legacy.Prometheus != nil {
+		c.UserWorkloadConfiguration.Prometheus = legacy.Prometheus
+	}
+	if legacy.ThanosRuler != nil {
+		c.UserWorkloadConfiguration.ThanosRuler = legacy.ThanosRuler
+	}
+	if legacy.TechPreviewUserWorkload != nil && legacy.TechPreviewUserWorkload.Enabled != nil && *legacy.TechPreviewUserWorkload.Enabled {
+		enabled := true
+		c.ClusterMonitoringConfiguration.UserWorkloadEnabled = &enabled
+	}
+
+	return c, nil
 }
 
 func (c *Config) applyDefaults() {
@@ -206,20 +231,11 @@ func (c *Config) applyDefaults() {
 	if c.ClusterMonitoringConfiguration.PrometheusOperatorConfig == nil {
 		c.ClusterMonitoringConfiguration.PrometheusOperatorConfig = &PrometheusOperatorConfig{}
 	}
-	if c.ClusterMonitoringConfiguration.PrometheusOperatorUserWorkloadConfig == nil {
-		c.ClusterMonitoringConfiguration.PrometheusOperatorUserWorkloadConfig = &PrometheusOperatorConfig{}
-	}
 	if c.ClusterMonitoringConfiguration.PrometheusK8sConfig == nil {
 		c.ClusterMonitoringConfiguration.PrometheusK8sConfig = &PrometheusK8sConfig{}
 	}
 	if c.ClusterMonitoringConfiguration.PrometheusK8sConfig.Retention == "" {
 		c.ClusterMonitoringConfiguration.PrometheusK8sConfig.Retention = "15d"
-	}
-	if c.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig == nil {
-		c.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig = &PrometheusK8sConfig{}
-	}
-	if c.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.Retention == "" {
-		c.ClusterMonitoringConfiguration.PrometheusUserWorkloadConfig.Retention = "15d"
 	}
 	if c.ClusterMonitoringConfiguration.AlertmanagerMainConfig == nil {
 		c.ClusterMonitoringConfiguration.AlertmanagerMainConfig = &AlertmanagerMainConfig{}
@@ -227,9 +243,6 @@ func (c *Config) applyDefaults() {
 	if c.ClusterMonitoringConfiguration.UserWorkloadEnabled == nil {
 		disable := false
 		c.ClusterMonitoringConfiguration.UserWorkloadEnabled = &disable
-	}
-	if c.ClusterMonitoringConfiguration.ThanosRulerConfig == nil {
-		c.ClusterMonitoringConfiguration.ThanosRulerConfig = &ThanosRulerConfig{}
 	}
 	if c.ClusterMonitoringConfiguration.ThanosQuerierConfig == nil {
 		c.ClusterMonitoringConfiguration.ThanosQuerierConfig = &ThanosQuerierConfig{}
@@ -256,9 +269,6 @@ func (c *Config) applyDefaults() {
 	}
 	if c.ClusterMonitoringConfiguration.EtcdConfig == nil {
 		c.ClusterMonitoringConfiguration.EtcdConfig = &EtcdConfig{}
-	}
-	if c.ClusterMonitoringConfiguration.UserWorkloadConfig == nil {
-		c.ClusterMonitoringConfiguration.UserWorkloadConfig = &UserWorkloadConfig{}
 	}
 }
 
@@ -378,12 +388,6 @@ func NewDefaultConfig() *Config {
 	return c
 }
 
-type UserWorkloadConfiguration struct {
-	PrometheusOperator *PrometheusOperatorConfig `json:"prometheusOperator"`
-	Prometheus         *PrometheusK8sConfig      `json:"prometheus"`
-	ThanosRuler        *ThanosRulerConfig        `json:"thanosRuler"`
-}
-
 func (u *UserWorkloadConfiguration) applyDefaults() {
 	if u.PrometheusOperator == nil {
 		u.PrometheusOperator = &PrometheusOperatorConfig{}
@@ -420,18 +424,5 @@ func NewDefaultUserWorkloadMonitoringConfig() *UserWorkloadConfiguration {
 // IsUserWorkloadEnabled checks if user workload monitoring is
 // enabled on old or new configuration.
 func (c *Config) IsUserWorkloadEnabled() bool {
-	if *c.ClusterMonitoringConfiguration.UserWorkloadEnabled == true {
-		return true
-	}
-
-	return c.ClusterMonitoringConfiguration.UserWorkloadConfig.isEnabled()
-}
-
-// isEnabled returns the underlying value of the `Enabled` boolean pointer.
-// It defaults to false if the pointer is nil.
-func (c *UserWorkloadConfig) isEnabled() bool {
-	if c.Enabled == nil {
-		return false
-	}
-	return *c.Enabled
+	return *c.ClusterMonitoringConfiguration.UserWorkloadEnabled
 }
