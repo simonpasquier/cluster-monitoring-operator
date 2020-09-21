@@ -26,6 +26,7 @@ require (
 )
 
 replace (
+	bitbucket.org/ww/goautoneg => github.com/adjust/goautoneg v0.0.0-20150426214442-d788f35a0315
 	k8s.io/api => k8s.io/api v0.18.3
 	k8s.io/apimachinery => k8s.io/apimachinery v0.18.3
 	k8s.io/client-go => k8s.io/client-go v0.18.3
