@@ -88,16 +88,17 @@ generate-in-docker:
 $(JSONNET_VENDOR): $(JB_BIN) jsonnet/jsonnetfile.json
 	cd jsonnet && $(JB_BIN) install
 
-$(ASSETS): build-jsonnet
-	# Check if files were properly generated
-	[ -f "$@" ] || exit 1
+#$(ASSETS): build-jsonnet
+#	# Check if files were properly generated
+#	[ -f "$@" ] || exit 1
 
 .PHONY: build-jsonnet
 build-jsonnet: $(JSONNET_BIN) $(GOJSONTOYAML_BIN) $(JSONNET_SRC) $(JSONNET_VENDOR)
 	./hack/build-jsonnet.sh
 
 # Merge cluster roles
-manifests/0000_50_cluster-monitoring-operator_02-role.yaml: hack/merge_cluster_roles.py hack/cluster-monitoring-operator-role.yaml.in $(ASSETS)
+#manifests/0000_50_cluster-monitoring-operator_02-role.yaml: hack/merge_cluster_roles.py hack/cluster-monitoring-operator-role.yaml.in $(ASSETS)
+manifests/0000_50_cluster-monitoring-operator_02-role.yaml: hack/merge_cluster_roles.py hack/cluster-monitoring-operator-role.yaml.in
 	python2 hack/merge_cluster_roles.py hack/cluster-monitoring-operator-role.yaml.in `find assets | grep role | grep -v "role-binding"` > $@
 
 .PHONY: docs

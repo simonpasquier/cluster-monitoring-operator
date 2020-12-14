@@ -14,7 +14,7 @@ mkdir $prefix
 TMP=$(mktemp -d -t tmp.XXXXXXXXXX)
 echo "Created temporary directory at $TMP"
 
-jsonnet -J jsonnet/vendor jsonnet/main.jsonnet > "${TMP}/main.json"
+jsonnet -J jsonnet/vendor jsonnet/single-node.jsonnet > "${TMP}/main.json"
 
 # Replace mapfile with while loop so it works with previous bash versions (Mac included)
 #mapfile -t files < <(jq -r 'keys[]' tmp/main.json)
