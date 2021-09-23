@@ -49,6 +49,15 @@ spec:
     - sourceLabels:
       - __metrics_path__
       targetLabel: metrics_path
+    - sourceLabels: [__meta_kubernetes_service_annotation_openshift_io_scrape_interval]
+      action: replace
+      regex: "(.+)"
+      targetLabel: __scrape_interval__
+    # add a label to trigger the reload when the scrape interval annotation changes
+    - sourceLabels: [__meta_kubernetes_service_annotation_openshift_io_scrape_interval]
+      action: replace
+      regex: "(.+)"
+      targetLabel: scrape_interval
     scheme: https
     scrapeTimeout: 30s
     tlsConfig:
@@ -81,6 +90,18 @@ spec:
     - sourceLabels:
       - __metrics_path__
       targetLabel: metrics_path
+    - replacement: "1m"
+      action: replace
+      targetLabel: __scrape_interval__
+    - sourceLabels: [__meta_kubernetes_service_annotation_openshift_io_scrape_interval]
+      action: replace
+      regex: "(.+)"
+      targetLabel: __scrape_interval__
+    # add a label to trigger the reload when the scrape interval annotation changes
+    - sourceLabels: [__meta_kubernetes_service_annotation_openshift_io_scrape_interval]
+      action: replace
+      regex: "(.+)"
+      targetLabel: scrape_interval
     scheme: https
     scrapeTimeout: 30s
     tlsConfig:
@@ -97,6 +118,18 @@ spec:
     - sourceLabels:
       - __metrics_path__
       targetLabel: metrics_path
+    - replacement: "1m"
+      action: replace
+      targetLabel: __scrape_interval__
+    - sourceLabels: [__meta_kubernetes_service_annotation_openshift_io_scrape_interval]
+      action: replace
+      regex: "(.+)"
+      targetLabel: __scrape_interval__
+    # add a label to trigger the reload when the scrape interval annotation changes
+    - sourceLabels: [__meta_kubernetes_service_annotation_openshift_io_scrape_interval]
+      action: replace
+      regex: "(.+)"
+      targetLabel: scrape_interval
     scheme: https
     scrapeTimeout: 30s
     tlsConfig:
@@ -121,6 +154,18 @@ spec:
     - action: replace
       replacement: crio
       targetLabel: job
+    - replacement: "1m"
+      action: replace
+      targetLabel: __scrape_interval__
+    - sourceLabels: [__meta_kubernetes_service_annotation_openshift_io_scrape_interval]
+      regex: "(.+)"
+      action: replace
+      targetLabel: __scrape_interval__
+    # add a label to trigger the reload when the scrape interval annotation changes
+    - sourceLabels: [__meta_kubernetes_service_annotation_openshift_io_scrape_interval]
+      action: replace
+      regex: "(.+)"
+      targetLabel: scrape_interval
   jobLabel: k8s-app
   namespaceSelector:
     matchNames:
