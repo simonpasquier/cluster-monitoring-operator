@@ -65,14 +65,21 @@ spec:
           requests:
             cpu: 5m
             memory: 30Mi
-        securityContext: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
         - mountPath: /etc/tls/private
           name: tls-certificates
           readOnly: true
       priorityClassName: system-cluster-critical
-      securityContext: {}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
       serviceAccountName: prometheus-operator-admission-webhook
       volumes:
       - name: tls-certificates

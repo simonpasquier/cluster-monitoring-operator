@@ -1,6 +1,5 @@
 local tlsVolumeName = 'prometheus-operator-admission-webhook-tls';
 local admissionWebhook = import 'github.com/prometheus-operator/prometheus-operator/jsonnet/prometheus-operator/admission-webhook.libsonnet';
-local antiAffinity = import 'github.com/prometheus-operator/kube-prometheus/jsonnet/kube-prometheus/addons/anti-affinity.libsonnet';
 
 function(params)
   local aw = admissionWebhook(params);
@@ -13,12 +12,6 @@ function(params)
         },
       },
       spec+: {
-        strategy+: {
-          // Apply HA conventions
-          rollingUpdate: {
-            maxUnavailable: 1,
-          },
-        },
         template+: {
           metadata+: {
             labels+: {
@@ -28,7 +21,6 @@ function(params)
           spec+: {
             // TODO(simonpasquier): configure client certificate authority to
             // enforce client authentication.
-            securityContext: {},
             priorityClassName: 'system-cluster-critical',
             containers:
               std.map(
@@ -56,7 +48,6 @@ function(params)
                           scheme: 'HTTPS',
                         },
                       },
-                      securityContext: {},
                       terminationMessagePolicy: 'FallbackToLogsOnError',
                       volumeMounts+: [
                         {
@@ -88,12 +79,7 @@ function(params)
                 },
               },
             ],
-          } + antiAffinity.antiaffinity(
-            aw.deployment.spec.selector.matchLabels,
-            aw._config.namespace,
-            'hard',
-            'kubernetes.io/hostname',
-          ),
+          },
         },
       },
     },

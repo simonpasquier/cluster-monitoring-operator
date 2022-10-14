@@ -141,7 +141,7 @@
           "subdir": "jsonnet/mixin"
         }
       },
-      "version": "ad64869358bfc470bac56c48a1ecee6dfb8dc88c",
+      "version": "a54a34c7a7ce31130fc9e271b410c1ebd8e9e0bf",
       "sum": "GQmaVFJwKMiD/P4n3N2LrAZVcwutriWrP8joclDtBYQ=",
       "name": "prometheus-operator-mixin"
     },
@@ -152,8 +152,8 @@
           "subdir": "jsonnet/prometheus-operator"
         }
       },
-      "version": "ad64869358bfc470bac56c48a1ecee6dfb8dc88c",
-      "sum": "zMopZuzEV7tZcO5AiKZMK8tSxabMKNdObpAOaYNY1jo="
+      "version": "a54a34c7a7ce31130fc9e271b410c1ebd8e9e0bf",
+      "sum": "u1rL3HRc/tH3D/NVhufMZA1TXkMcD2mGuHIkgCXUIyg="
     },
     {
       "source": {
