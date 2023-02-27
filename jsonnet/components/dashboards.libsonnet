@@ -55,11 +55,7 @@ function(params)
     'node-rsrc-use.json',
   ];
 
-  local glib = kubernetesGrafana(cfg) + {
-    _config+: {
-      clusterLabel: 'cluster',
-    },
-  };
+  local glib = kubernetesGrafana(cfg);
 
   local unstackDashboards = function(dashboards)
     std.map(
