@@ -21,6 +21,14 @@
               path: '/metrics',
               resourceRequest: false,
             },
+            {
+              user: {
+                name: 'system:serviceaccount:openshift-monitoring:prometheus-k8s-federate',
+              },
+              verb: 'get',
+              path: '/federate',
+              resourceRequest: false,
+            },
           ],
         },
       },),

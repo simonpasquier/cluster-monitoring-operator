@@ -397,13 +397,14 @@ function(params)
             args: [
               '--secure-listen-address=0.0.0.0:9092',
               '--upstream=http://127.0.0.1:9090',
-              '--allow-paths=/metrics',
+              '--allow-paths=/metrics,/federate',
               '--config-file=/etc/kube-rbac-proxy/config.yaml',
               '--tls-cert-file=/etc/tls/private/tls.crt',
               '--tls-private-key-file=/etc/tls/private/tls.key',
               '--client-ca-file=/etc/tls/client/client-ca.crt',
               '--tls-cipher-suites=' + cfg.tlsCipherSuites,
               '--logtostderr=true',
+              '--v=10',
             ],
             terminationMessagePolicy: 'FallbackToLogsOnError',
             volumeMounts: [
