@@ -1,5 +1,5 @@
 {
-  staticAuthSecret(cfgNamespace, cfgCommonLabels, cfgName):: {
+  staticAuthSecret(cfgNamespace, cfgCommonLabels, cfgName, additionalConfig={}):: {
     apiVersion: 'v1',
     kind: 'Secret',
     metadata: {
@@ -21,17 +21,9 @@
               path: '/metrics',
               resourceRequest: false,
             },
-            {
-              user: {
-                name: 'system:serviceaccount:openshift-monitoring:prometheus-k8s-federate',
-              },
-              verb: 'get',
-              path: '/federate',
-              resourceRequest: false,
-            },
           ],
         },
-      },),
+      } + additionalConfig),
     },
   },
 }

@@ -40,7 +40,26 @@ function(params) {
   },
   secret: tc.telemeterClient.secret,
   servingCertsCABundle: tc.telemeterClient.servingCertsCABundle,
-  kubeRbacProxySecret: generateSecret.staticAuthSecret(cfg.namespace, cfg.commonLabels, 'telemeter-client-kube-rbac-proxy-config'),
+  kubeRbacProxySecret: generateSecret.staticAuthSecret(
+    cfg.namespace,
+    cfg.commonLabels,
+    'telemeter-client-kube-rbac-proxy-config',
+    {
+      authorization+: {
+        static+: [
+          {
+            user: {
+              name: 'system:serviceaccount:openshift-monitoring:prometheus-k8s-federate',
+            },
+            verb: 'get',
+            path: '/federate',
+            resourceRequest: false,
+          },
+        ],
+      },
+    },
+  ),
+
   deployment: tc.telemeterClient.deployment {
     metadata+: {
       labels+: {
