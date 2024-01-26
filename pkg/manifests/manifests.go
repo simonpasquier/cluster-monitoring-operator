@@ -952,7 +952,7 @@ func (f *Factory) updateNodeExporterArgs(args []string) ([]string, error) {
 
 		pattern, err := regexListToArg(f.config.ClusterMonitoringConfiguration.NodeExporterConfig.Collectors.Systemd.Units)
 		if err != nil {
-			return nil, fmt.Errorf("systemd unit pattern valiation error: %w", err)
+			return nil, fmt.Errorf("systemd unit pattern validation error: %w", err)
 		}
 		args = setArg(args, "--collector.systemd.unit-include=", pattern)
 	} else {

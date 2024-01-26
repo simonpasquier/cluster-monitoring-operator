@@ -3403,8 +3403,8 @@ nodeExporter:
 
 		f := NewFactory("openshift-monitoring", "openshift-user-workload-monitoring", c, defaultInfrastructureReader(), &fakeProxyReader{}, NewAssets(assetsPath), &APIServerConfig{}, &configv1.Console{})
 		_, err = f.NodeExporterDaemonSet()
-		if err == nil || !strings.Contains(err.Error(), "systemd unit pattern valiation error:") {
-			t.Fatalf(`expected error "systemd unit pattern valiation error:.*", got %v`, err)
+		if err == nil || !strings.Contains(err.Error(), "systemd unit pattern validation error:") {
+			t.Fatalf(`expected error "systemd unit pattern validation error:.*", got %v`, err)
 		}
 	})
 }
