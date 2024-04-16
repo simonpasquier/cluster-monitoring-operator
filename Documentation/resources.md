@@ -47,7 +47,7 @@ Expose the admission webhook service which validates `PrometheusRules` and `Aler
 ### openshift-user-workload-monitoring/alertmanager-user-workload
 
 Expose the user-defined Alertmanager web server within the cluster on the following ports:
-* Port 9095 provides access to the Alertmanager endpoints. Granting access requires binding a user to the `monitoring-alertmanager-api-reader` role (for read-only operations) or `monitoritoring-alertmanager-api-writer` role in the `openshift-user-workload-monitoring` project.
+* Port 9095 provides access to the Alertmanager endpoints. Granting access requires binding a user to the `monitoring-alertmanager-api-reader` role (for read-only operations) or `monitoring-alertmanager-api-writer` role in the `openshift-user-workload-monitoring` project.
 * Port 9092 provides access to the Alertmanager endpoints restricted to a given project. Granting access requires binding a user to the `monitoring-rules-edit` cluster role or `monitoring-edit` cluster role in the project.
 * Port 9097 provides access to the `/metrics` endpoint only. This port is for internal use, and no other usage is guaranteed.
 
