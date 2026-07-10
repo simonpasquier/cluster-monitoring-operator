@@ -39,6 +39,7 @@ import (
 	apiutilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
@@ -1048,15 +1049,35 @@ func (o *Operator) Config(ctx context.Context) (*manifests.Config, []string, err
 			klog.Warningf("Could not fetch cluster version from API. Proceeding without it: %v", err)
 		}
 
-		err = c.LoadToken(func() (*v1.Secret, error) {
-			return o.client.KubernetesInterface().CoreV1().Secrets("openshift-config").Get(ctx, "pull-secret", metav1.GetOptions{})
-		})
-
-		if err != nil {
-			klog.Warningf("Error loading token from API. Proceeding without it: %v", err)
-		}
+		loadTelemeterToken(ctx, c, o.client.KubernetesInterface())
 	}
 	return c, warnings, nil
+}
+
+// loadTelemeterToken tries to load the cloud.openshift.com token from
+// openshift-config/pull-secret first, then falls back to
+// kube-system/global-pull-secret (HCP clusters where the customer adds
+// cloud.openshift.com via day-2 additional-pull-secret).
+func loadTelemeterToken(ctx context.Context, c *manifests.Config, kubeClient kubernetes.Interface) {
+	tokenSources := []struct{ namespace, name string }{
+		{"openshift-config", "pull-secret"},
+		{"kube-system", "global-pull-secret"},
+	}
+	var tokenErrors []error
+	for _, s := range tokenSources {
+		err := c.LoadToken(func() (*v1.Secret, error) {
+			return kubeClient.CoreV1().Secrets(s.namespace).Get(ctx, s.name, metav1.GetOptions{})
+		})
+		if err != nil {
+			tokenErrors = append(tokenErrors, fmt.Errorf("%s/%s: %w", s.namespace, s.name, err))
+		}
+		if c.ClusterMonitoringConfiguration.TelemeterClientConfig.Token != "" {
+			break
+		}
+	}
+	if c.ClusterMonitoringConfiguration.TelemeterClientConfig.Token == "" && len(tokenErrors) > 0 {
+		klog.Warningf("Failed to load token from any source. Proceeding without it: %v", tokenErrors)
+	}
 }
 
 // storageNotConfiguredMessage returns the message to be set if a pvc has not
