@@ -39,7 +39,6 @@ import (
 	apiutilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
@@ -1049,8 +1048,9 @@ func (o *Operator) Config(ctx context.Context) (*manifests.Config, []string, err
 			klog.Warningf("Could not fetch cluster version from API. Proceeding without it: %v", err)
 		}
 
-		loadTelemeterToken(ctx, c, o.client.KubernetesInterface())
+		o.loadTelemeterToken(ctx, c)
 	}
+
 	return c, warnings, nil
 }
 
@@ -1058,19 +1058,24 @@ func (o *Operator) Config(ctx context.Context) (*manifests.Config, []string, err
 // openshift-config/pull-secret first, then falls back to
 // kube-system/global-pull-secret (HCP clusters where the customer adds
 // cloud.openshift.com via day-2 additional-pull-secret).
-func loadTelemeterToken(ctx context.Context, c *manifests.Config, kubeClient kubernetes.Interface) {
+func (o *Operator) loadTelemeterToken(ctx context.Context, c *manifests.Config) {
 	tokenSources := []struct{ namespace, name string }{
 		{"openshift-config", "pull-secret"},
 		{"kube-system", "global-pull-secret"},
 	}
 	var tokenErrors []error
 	for _, s := range tokenSources {
-		err := c.LoadToken(func() (*v1.Secret, error) {
-			return kubeClient.CoreV1().Secrets(s.namespace).Get(ctx, s.name, metav1.GetOptions{})
-		})
+		pullSecret, err := o.client.GetSecret(ctx, s.namespace, s.name)
 		if err != nil {
-			tokenErrors = append(tokenErrors, fmt.Errorf("%s/%s: %w", s.namespace, s.name, err))
+			tokenErrors = append(tokenErrors, fmt.Errorf("failed to get secret %s/%s: %w", s.namespace, s.name, err))
+			continue
 		}
+
+		if err = c.LoadToken(pullSecret); err != nil {
+			tokenErrors = append(tokenErrors, fmt.Errorf("failed to parse pull secret: %s/%s: %w", s.namespace, s.name, err))
+			continue
+		}
+
 		if c.ClusterMonitoringConfiguration.TelemeterClientConfig.Token != "" {
 			break
 		}

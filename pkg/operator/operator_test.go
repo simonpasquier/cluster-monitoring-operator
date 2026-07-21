@@ -624,12 +624,20 @@ func TestLoadTelemeterToken(t *testing.T) {
 			for i, s := range tc.secrets {
 				objects[i] = s
 			}
-			fakeClient := fake.NewSimpleClientset(objects...)
+			client := client.New(
+				"v0.0.0",
+				"openshift-monitoring",
+				"openshift-user-workload-monitoring",
+				client.KubernetesClient(fake.NewSimpleClientset(objects...)),
+			)
 
 			c, err := manifests.NewConfigFromString("")
 			require.NoError(t, err)
 
-			loadTelemeterToken(context.Background(), c, fakeClient)
+			o := &Operator{
+				client: client,
+			}
+			o.loadTelemeterToken(context.Background(), c)
 
 			require.Equal(t, tc.expectToken, c.ClusterMonitoringConfiguration.TelemeterClientConfig.Token)
 		})
